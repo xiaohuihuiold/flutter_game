@@ -1,6 +1,8 @@
 import 'dart:typed_data';
 import 'dart:ui';
 import 'dart:ui' as ui;
+import 'package:image/image.dart' as img;
+import 'package:flutter/services.dart';
 import 'package:vector_math/vector_math_64.dart';
 
 abstract class GameObject {
@@ -29,65 +31,90 @@ abstract class GameObjectGroup {
 }
 
 class Cube extends GameObjectGroup {
+  static img.Image dirt;
+
+  Cube() {
+    if (dirt != null) return;
+    GameUtil._loadImage('assets/dirt.png').then((image) {
+      dirt = image;
+    });
+  }
+
   @override
   List<GameFace> get faces => _generaCube();
 
   List<GameFace> _generaCube() {
     List<GameFace> gameFaces = List();
-    GameFace back = GameFace()
-      ..color = ui.Color.fromARGB(255, 255, 0, 0)
-      ..vertices = [
-        Vector3(-1.0, -1.0, -1.0),
-        Vector3(1.0, -1.0, -1.0),
-        Vector3(1.0, 1.0, -1.0),
-        Vector3(-1.0, 1.0, -1.0),
-      ];
-    GameFace front = GameFace()
-      ..color = ui.Color.fromARGB(255, 0, 255, 0)
-      ..vertices = [
-        Vector3(-1.0, -1.0, 1.0),
-        Vector3(1.0, -1.0, 1.0),
-        Vector3(1.0, 1.0, 1.0),
-        Vector3(-1.0, 1.0, 1.0),
-      ];
-    GameFace top = GameFace()
-      ..color = ui.Color.fromARGB(255, 0, 0, 255)
-      ..vertices = [
-        Vector3(-1.0, 1.0, 1.0),
-        Vector3(1.0, 1.0, 1.0),
-        Vector3(1.0, 1.0, -1.0),
-        Vector3(-1.0, 1.0, -1.0),
-      ];
-    GameFace bottom = GameFace()
-      ..color = ui.Color.fromARGB(255, 255, 255, 0)
-      ..vertices = [
-        Vector3(-1.0, -1.0, 1.0),
-        Vector3(1.0, -1.0, 1.0),
-        Vector3(1.0, -1.0, -1.0),
-        Vector3(-1.0, -1.0, -1.0),
-      ];
-    GameFace left = GameFace()
-      ..color = ui.Color.fromARGB(255, 255, 0, 255)
-      ..vertices = [
-        Vector3(-1.0, -1.0, 1.0),
-        Vector3(-1.0, -1.0, -1.0),
-        Vector3(-1.0, 1.0, -1.0),
-        Vector3(-1.0, 1.0, 1.0),
-      ];
-    GameFace right = GameFace()
-      ..color = ui.Color.fromARGB(255, 0, 255, 255)
-      ..vertices = [
-        Vector3(1.0, -1.0, 1.0),
-        Vector3(1.0, -1.0, -1.0),
-        Vector3(1.0, 1.0, -1.0),
-        Vector3(1.0, 1.0, 1.0),
-      ];
-    gameFaces.add(front);
-    gameFaces.add(back);
-    gameFaces.add(top);
-    gameFaces.add(bottom);
-    gameFaces.add(left);
-    gameFaces.add(right);
+    for (int w = 0; w < 16; w++) {
+      for (int h = 0; h < 16; h++) {
+        double size = 1.0 / 16.0;
+
+        double left = w / 16 - 0.5;
+        double bottom = h / 16 - 0.5;
+        double right = left + size;
+        double top = bottom + size;
+
+        GameFace backFace = GameFace();
+        backFace.color = GameUtil.abgr2argb(dirt?.getPixel(w, h));
+        backFace.vertices = [
+          Vector3(left, bottom, -0.5),
+          Vector3(right, bottom, -0.5),
+          Vector3(right, top, -0.5),
+          Vector3(left, top, -0.5),
+        ];
+        gameFaces.add(backFace);
+
+        GameFace frontFace = GameFace();
+        frontFace.color = GameUtil.abgr2argb(dirt?.getPixel(w, h));
+        frontFace.vertices = [
+          Vector3(left, bottom, 0.5),
+          Vector3(right, bottom, 0.5),
+          Vector3(right, top, 0.5),
+          Vector3(left, top, 0.5),
+        ];
+        gameFaces.add(frontFace);
+
+        GameFace bottomFace = GameFace();
+        bottomFace.color = GameUtil.abgr2argb(dirt?.getPixel(w, h));
+        bottomFace.vertices = [
+          Vector3(left, -0.5, bottom),
+          Vector3(right, -0.5, bottom),
+          Vector3(right, -0.5, top),
+          Vector3(left, -0.5, top),
+        ];
+        gameFaces.add(bottomFace);
+
+        GameFace topFace = GameFace();
+        topFace.color = GameUtil.abgr2argb(dirt?.getPixel(w, h));
+        topFace.vertices = [
+          Vector3(left, 0.5, bottom),
+          Vector3(right, 0.5, bottom),
+          Vector3(right, 0.5, top),
+          Vector3(left, 0.5, top),
+        ];
+        gameFaces.add(topFace);
+
+        GameFace leftFace = GameFace();
+        leftFace.color = GameUtil.abgr2argb(dirt?.getPixel(w, h));
+        leftFace.vertices = [
+          Vector3(-0.5, left, bottom),
+          Vector3(-0.5, right, bottom),
+          Vector3(-0.5, right, top),
+          Vector3(-0.5, left, top),
+        ];
+        gameFaces.add(leftFace);
+
+        GameFace rightFace = GameFace();
+        rightFace.color = GameUtil.abgr2argb(dirt?.getPixel(w, h));
+        rightFace.vertices = [
+          Vector3(0.5, left, bottom),
+          Vector3(0.5, right, bottom),
+          Vector3(0.5, right, top),
+          Vector3(0.5, left, top),
+        ];
+        gameFaces.add(rightFace);
+      }
+    }
     return gameFaces;
   }
 
@@ -96,9 +123,9 @@ class Cube extends GameObjectGroup {
     Matrix4 matrix4 = Matrix4.fromFloat64List(float64list);
     List<GameFace> faces = this.faces;
     faces.forEach((face) {
-      face.vertices?.forEach((vertex) {
-        matrix4.perspectiveTransform(vertex);
-      });
+      for (int i = 0; i < face.vertices.length; i++) {
+        matrix4.perspectiveTransform(face.vertices[i]);
+      }
     });
     return faces;
   }
@@ -122,16 +149,38 @@ class GameUtil {
     return faces;
   }
 
-  static Path generaFace(GameFace face) {
-    if ((face?.vertices?.length ?? 0) < 1) {
+  static Path generaFace(GameFace face, Size size) {
+    if ((face?.vertices?.length ?? 0) < 1 || size == null) {
       return null;
     }
     Path path = Path();
-    path.moveTo(face.vertices[0].x, face.vertices[0].y);
+    double w = size.width / 2.0;
+    double h = size.height / 2.0;
+    path.moveTo(face.vertices[0].x * w + w, -(face.vertices[0].y * h) + h);
     for (int i = 1; i < face.vertices.length; i++) {
-      path.lineTo(face.vertices[i].x, face.vertices[i].y);
+      path.lineTo(face.vertices[i].x * w + w, -(face.vertices[i].y * h) + h);
     }
     path.close();
     return path;
+  }
+
+  static Color abgr2argb(int color) {
+    if (color == null) {
+      return null;
+    }
+    return Color.fromARGB(
+        color >> 24, color & 0xff, (color >> 8) & 0xff, color >> (16 & 0xff));
+  }
+
+  static Map<String, img.Image> _imageCache = Map();
+
+  static Future<img.Image> _loadImage(String path) async {
+    img.Image image = _imageCache[path.trim()];
+    if (image != null) {
+      return image;
+    }
+    image = img.decodeImage((await rootBundle.load(path)).buffer.asUint8List());
+    _imageCache[path.trim()] = image;
+    return image;
   }
 }

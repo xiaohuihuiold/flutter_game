@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:flutter_game/common/game/camera.dart';
 import 'package:vector_math/vector_math_64.dart' as V;
 
 import 'package:flutter/material.dart';
@@ -13,6 +14,8 @@ class GamePage extends StatefulWidget {
 class _GamePageState extends State<GamePage> with TickerProviderStateMixin {
   Timer _timer;
   double _angle = 0.0;
+
+  Camera _camera = Camera();
 
   @override
   void initState() {
@@ -34,9 +37,83 @@ class _GamePageState extends State<GamePage> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey,
-      body: CustomPaint(
-        size: Size.infinite,
-        painter: GamePainter(angle: _angle),
+      body: Stack(
+        children: <Widget>[
+          GestureDetector(
+            onPanUpdate: (detail) {
+              _camera.updateMouse(detail.delta.dx, detail.delta.dy);
+            },
+            child: CustomPaint(
+              size: Size.infinite,
+              painter: GamePainter(
+                angle: _angle,
+                camera: _camera,
+              ),
+            ),
+          ),
+          Positioned(
+            left: 50.0,
+            bottom: 50.0,
+            child: Column(
+              children: <Widget>[
+                GestureDetector(
+                  onTap: () {
+                    //_camera.toFront();
+                    _camera.updateMouse(0.0, 1.0);
+                  },
+                  child: Container(
+                    width: 50.0,
+                    height: 50.0,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(color: Colors.white54),
+                    child: Text('W'),
+                  ),
+                ),
+                Row(
+                  children: <Widget>[
+                    GestureDetector(
+                      onTap: () {
+                        _camera.toLeft();
+                      },
+                      child: Container(
+                        width: 50.0,
+                        height: 50.0,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(color: Colors.white54),
+                        child: Text('A'),
+                      ),
+                    ),
+                    SizedBox(width: 50.0),
+                    GestureDetector(
+                      onTap: () {
+                        _camera.toRight();
+                      },
+                      child: Container(
+                        width: 50.0,
+                        height: 50.0,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(color: Colors.white54),
+                        child: Text('D'),
+                      ),
+                    ),
+                  ],
+                ),
+                GestureDetector(
+                  onTap: () {
+                    _camera.toBack();
+                  },
+                  child: Container(
+                    width: 50.0,
+                    height: 50.0,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(color: Colors.white54),
+                    child: Text('S'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -44,49 +121,50 @@ class _GamePageState extends State<GamePage> with TickerProviderStateMixin {
 
 class GamePainter extends CustomPainter {
   double angle;
+  Camera camera;
 
   Canvas _canvas;
   Size _size;
   Paint _gamePaint = Paint()..isAntiAlias = true;
   Cube cube = Cube();
 
-  Matrix4 camera = Matrix4.identity();
-
-  GamePainter({this.angle});
+  GamePainter({
+    this.camera,
+    this.angle,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
     _canvas = canvas;
     _size = size;
+    if (camera == null) {
+      return;
+    }
+    camera.update();
+    camera.updateSize(_size);
 
     _clear();
-    double fov = pi / 4;
-    double aspect = size.width / size.height;
-    double zn = 0.001;
-    double zf = 100.0;
-    double tanFov = tan(fov / 2);
 
-    camera = Matrix4.zero();
-    camera.row0 = V.Vector4((1.0 / (aspect * tanFov)), 0.0, 0.0, 0.0);
-    camera.row1 = V.Vector4(0.0, 1 / tanFov, 0.0, 0.0);
-    camera.row2 = V.Vector4(0.0, 0.0, -(zf + zn) / (zf - zn), -1.0);
-    camera.row3 = V.Vector4(0.0, 0.0, -(2 * zf * zn) / (zf - zn), 1.0);
+    Matrix4 view = Matrix4.identity();
+    view.translate(0.0, 0.0, 60.0);
+    view.rotateX(angle);
+    view.rotateZ(angle);
 
-    /* print('///');
-    print(camera);*/
-
-    Matrix4 matrix4 = Matrix4.identity();
-    matrix4.rotateX(angle);
-    matrix4.rotateY(angle);
-    matrix4.rotateZ(angle);
-    matrix4.scale(70.0, 70.0, 70.0);
-    camera.translate(size.width / 2, size.height / 4, -200.0);
-    camera.multiply(matrix4);
-
-    List<GameFace> faces = GameUtil.orderZ(cube.transform(camera.storage));
+    List<GameFace> faces = List();
+    for (int w = 0; w < 10; w += 2) {
+      for (int h = 0; h < 10; h += 2) {
+        Matrix4 model = Matrix4.identity();
+        model.translate(0.0 + w - 5.0, 0.0 + h - 5.0, 0.0);
+        //model.rotateX(angle);
+        //model.rotateY(angle);
+        //model.rotateZ(angle);
+        faces
+            .addAll(cube.transform((camera.projection * view * model).storage));
+      }
+    }
+    faces = GameUtil.orderZ(faces);
     faces.forEach((face) {
-      Path path = GameUtil.generaFace(face);
-
+      Path path = GameUtil.generaFace(face, _size);
       _canvas.drawPath(
         path,
         _gamePaint
