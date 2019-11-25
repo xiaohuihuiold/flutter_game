@@ -4,4 +4,4 @@ test game
 
 ## Screenshots
 
-![cube.gif](screenshots/cube.gif)
+![cube.gif](screenshots/cube.png)
