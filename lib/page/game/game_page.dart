@@ -51,7 +51,7 @@ class _GamePageState extends State<GamePage> with TickerProviderStateMixin {
               ),
             ),
           ),
-          Positioned(
+         /* Positioned(
             left: 50.0,
             bottom: 50.0,
             child: Column(
@@ -112,7 +112,7 @@ class _GamePageState extends State<GamePage> with TickerProviderStateMixin {
                 ),
               ],
             ),
-          ),
+          ),*/
         ],
       ),
     );
@@ -146,22 +146,19 @@ class GamePainter extends CustomPainter {
     _clear();
 
     Matrix4 view = Matrix4.identity();
-    view.translate(0.0, 0.0, 60.0);
-    view.rotateX(angle);
+    view.translate(0.0, 0.0, 30.0);
+    view.rotateY(angle);
     view.rotateZ(angle);
 
     List<GameFace> faces = List();
-    for (int w = 0; w < 10; w += 2) {
-      for (int h = 0; h < 10; h += 2) {
-        Matrix4 model = Matrix4.identity();
-        model.translate(0.0 + w - 5.0, 0.0 + h - 5.0, 0.0);
-        //model.rotateX(angle);
-        //model.rotateY(angle);
-        //model.rotateZ(angle);
-        faces
-            .addAll(cube.transform((camera.projection * view * model).storage));
-      }
-    }
+
+    Matrix4 model = Matrix4.identity();
+    model.translate(0.0, 0.0, 0.0);
+    //model.rotateX(angle);
+    //model.rotateY(angle);
+    //model.rotateZ(angle);
+    faces.addAll(cube.transform((camera.projection * view * model).storage));
+
     faces = GameUtil.orderZ(faces);
     faces.forEach((face) {
       Path path = GameUtil.generaFace(face, _size);
